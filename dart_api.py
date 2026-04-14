@@ -10,15 +10,17 @@ from datetime import datetime
 
 import requests
 import pandas as pd
+import streamlit as st
 
 from db import upsert_financial, insert_news_bulk
 
 # ==========================================
-# 인증키
+# 인증키 (Streamlit Secrets에서 로드)
 # ==========================================
 DART_API_KEY        = st.secrets["DART_API_KEY"]
 NAVER_CLIENT_ID     = st.secrets["NAVER_CLIENT_ID"]
 NAVER_CLIENT_SECRET = st.secrets["NAVER_CLIENT_SECRET"]
+
 
 # ==========================================
 # DART API
