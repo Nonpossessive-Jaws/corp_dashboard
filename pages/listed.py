@@ -22,6 +22,62 @@ def _validate(corp_name, items, dart_start, dart_end, news_start, news_end) -> l
     return errors
 
 
+def fetch_stock_info(corp_name: str) -> dict | None:
+    """
+    KRX 종목 리스트에서 기업명으로 티커를 찾고,
+    yfinance로 현재 주가 정보를 조회해 dict로 반환.
+    조회 실패 시 None 반환.
+    """
+    try:
+        import FinanceDataReader as fdr
+        import yfinance as yf
+        from datetime import datetime
+
+        df_krx = fdr.StockListing('KRX')
+        # 정확히 일치하는 종목 우선, 없으면 포함 검색
+        exact = df_krx[df_krx['Name'] == corp_name]
+        target = exact if not exact.empty else df_krx[df_krx['Name'].str.contains(corp_name, na=False)]
+
+        if target.empty:
+            return None
+
+        row    = target.iloc[0]
+        symbol = row['Code']
+        market = row['Market']
+        name   = row['Name']
+        suffix = ".KS" if market == "KOSPI" else ".KQ"
+        ticker = f"{symbol}{suffix}"
+
+        stock = yf.Ticker(ticker)
+        info  = stock.info
+
+        current_price = info.get("currentPrice") or info.get("regularMarketPrice")
+        if current_price is None:
+            return None
+
+        prev_close = info.get("previousClose")
+        change     = current_price - prev_close if prev_close else None
+        change_pct = (change / prev_close * 100) if (prev_close and change is not None) else None
+
+        return {
+            "종목명":   name,
+            "종목코드": symbol,
+            "시장":     market,
+            "현재가":   current_price,
+            "전일종가": prev_close,
+            "등락":     change,
+            "등락률":   change_pct,
+            "시가":     info.get("open"),
+            "고가":     info.get("dayHigh"),
+            "저가":     info.get("dayLow"),
+            "거래량":   info.get("volume"),
+            "시가총액": info.get("marketCap"),
+            "조회시각": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+    except Exception:
+        return None
+
+
 def render():
     # ── 뒤로가기 ──────────────────────────────────────────
     if st.button("← 처음으로", key="listed_back"):
@@ -100,6 +156,10 @@ def render():
         with st.spinner("뉴스 수집 중..."):
             news_list = fetch_and_store_news(corp_name, news_start, news_end)
 
+        # ── 주가 정보 수집 (실패해도 결과 페이지는 정상 표시) ──
+        with st.spinner("주가 정보 조회 중..."):
+            stock_info = fetch_stock_info(corp_name)
+
         # 결과를 session_state에 저장 후 결과 페이지로 전환
         st.session_state.result = {
             "corp_name":    corp_name,
@@ -107,6 +167,7 @@ def render():
             "items":        items,
             "news_list":    news_list,
             "source":       "dart",
+            "stock_info":   stock_info,   # None이면 result.py에서 섹션 생략
         }
         st.session_state.page = "result"
         st.rerun()

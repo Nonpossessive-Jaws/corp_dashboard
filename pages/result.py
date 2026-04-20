@@ -1,9 +1,164 @@
 # pages/result.py
-# 결과 페이지: 재무 테이블 + 차트 + 뉴스
+# 결과 페이지: 재무 테이블 + 차트 + 주가 정보 + 뉴스
 import streamlit as st
 import pandas as pd
 
 from chart import build_performance_chart
+
+
+def _fmt_price(val) -> str:
+    """숫자를 천 단위 콤마 + 원 형식으로 포맷. None이면 N/A"""
+    if val is None:
+        return "N/A"
+    try:
+        return f"{int(val):,}원"
+    except Exception:
+        return str(val)
+
+
+def _fmt_volume(val) -> str:
+    if val is None:
+        return "N/A"
+    try:
+        return f"{int(val):,}주"
+    except Exception:
+        return str(val)
+
+
+def _fmt_market_cap(val) -> str:
+    if val is None:
+        return "N/A"
+    try:
+        billion = int(val) // 100_000_000
+        return f"{billion:,}억원"
+    except Exception:
+        return str(val)
+
+
+def render_stock_section(stock: dict):
+    """주가 정보 섹션 렌더링"""
+
+    change     = stock.get("등락")
+    change_pct = stock.get("등락률")
+
+    if change is not None and change_pct is not None:
+        arrow      = "▲" if change >= 0 else "▼"
+        sign       = "+" if change >= 0 else ""
+        color_cls  = "up" if change >= 0 else "down"
+        change_str = f"{arrow} {sign}{int(change):,}원 ({sign}{change_pct:.2f}%)"
+    else:
+        color_cls  = "neutral"
+        change_str = "N/A"
+
+    current_str = _fmt_price(stock.get("현재가"))
+    query_time  = stock.get("조회시각", "")
+    market_name = stock.get("시장", "")
+    ticker_code = stock.get("종목코드", "")
+
+    st.markdown(f"""
+    <style>
+    .stock-card {{
+        background: #ffffff;
+        border: 1.5px solid #E8EAED;
+        border-radius: 14px;
+        padding: 24px 28px 20px;
+        margin-bottom: 8px;
+    }}
+    .stock-header {{
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 4px;
+    }}
+    .stock-name {{
+        font-size: 18px;
+        font-weight: 700;
+        color: #2C3E50;
+    }}
+    .stock-meta {{
+        font-size: 12px;
+        color: #95A5A6;
+    }}
+    .stock-price-row {{
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        margin: 8px 0 6px;
+    }}
+    .stock-price {{
+        font-size: 32px;
+        font-weight: 700;
+        color: #2C3E50;
+        letter-spacing: -0.5px;
+    }}
+    .stock-change.up   {{ font-size: 16px; font-weight: 600; color: #E74C3C; }}
+    .stock-change.down {{ font-size: 16px; font-weight: 600; color: #2980B9; }}
+    .stock-change.neutral {{ font-size: 16px; color: #95A5A6; }}
+    .stock-timestamp {{
+        font-size: 11px;
+        color: #BDC3C7;
+        margin-bottom: 18px;
+    }}
+    .stock-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0;
+        border-top: 1px solid #F0F0F0;
+        padding-top: 16px;
+    }}
+    .stock-cell {{
+        padding: 6px 12px 6px 0;
+    }}
+    .stock-cell-label {{
+        font-size: 11px;
+        color: #95A5A6;
+        margin-bottom: 3px;
+    }}
+    .stock-cell-value {{
+        font-size: 14px;
+        font-weight: 500;
+        color: #2C3E50;
+    }}
+    </style>
+
+    <div class="stock-card">
+        <div class="stock-header">
+            <span class="stock-name">{stock.get("종목명", "")}</span>
+            <span class="stock-meta">{ticker_code} · {market_name}</span>
+        </div>
+        <div class="stock-price-row">
+            <span class="stock-price">{current_str}</span>
+            <span class="stock-change {color_cls}">{change_str}</span>
+        </div>
+        <div class="stock-timestamp">📅 조회 시점: {query_time} 기준 &nbsp;·&nbsp; 실시간 시세가 아닙니다</div>
+        <div class="stock-grid">
+            <div class="stock-cell">
+                <div class="stock-cell-label">전일종가</div>
+                <div class="stock-cell-value">{_fmt_price(stock.get("전일종가"))}</div>
+            </div>
+            <div class="stock-cell">
+                <div class="stock-cell-label">시가</div>
+                <div class="stock-cell-value">{_fmt_price(stock.get("시가"))}</div>
+            </div>
+            <div class="stock-cell">
+                <div class="stock-cell-label">고가</div>
+                <div class="stock-cell-value">{_fmt_price(stock.get("고가"))}</div>
+            </div>
+            <div class="stock-cell">
+                <div class="stock-cell-label">저가</div>
+                <div class="stock-cell-value">{_fmt_price(stock.get("저가"))}</div>
+            </div>
+            <div class="stock-cell">
+                <div class="stock-cell-label">거래량</div>
+                <div class="stock-cell-value">{_fmt_volume(stock.get("거래량"))}</div>
+            </div>
+            <div class="stock-cell">
+                <div class="stock-cell-label">시가총액</div>
+                <div class="stock-cell-value">{_fmt_market_cap(stock.get("시가총액"))}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def render():
@@ -12,6 +167,7 @@ def render():
     data_dict  = r.get("data_by_item", {})
     items      = r.get("items", [])
     news_list  = r.get("news_list", [])
+    stock_info = r.get("stock_info")        # listed.py에서만 존재, 없으면 None
 
     # ── 헤더 ──────────────────────────────────────────────
     col_back, col_title = st.columns([1, 7])
@@ -34,7 +190,6 @@ def render():
     if not has_any_data:
         st.info("수집된 재무 데이터가 없습니다.")
     else:
-        # 연도 × 항목 피벗 테이블 구성
         rows = {}
         for item, records in data_dict.items():
             for rec in records:
@@ -42,7 +197,6 @@ def render():
                 amt = rec["amount"]
                 if yr not in rows:
                     rows[yr] = {"연도": yr}
-                # 억원 단위로 표시
                 rows[yr][item] = f"{int(amt / 1e8):,} 억원" if amt != 0 else "-"
 
         if rows:
@@ -67,7 +221,15 @@ def render():
     st.divider()
 
     # ══════════════════════════════════════════════════════
-    # 3. 뉴스 검색 결과
+    # 3. 주가 정보 (상장사 조회 성공 시에만 표시)
+    # ══════════════════════════════════════════════════════
+    if stock_info:
+        st.markdown("### 주가 정보")
+        render_stock_section(stock_info)
+        st.divider()
+
+    # ══════════════════════════════════════════════════════
+    # 4. 뉴스 검색 결과
     # ══════════════════════════════════════════════════════
     st.markdown("### 관련 뉴스")
 
@@ -84,7 +246,6 @@ def render():
             for n in news_list
         ])
 
-        # 링크를 클릭 가능한 HTML로 렌더링
         def make_link(url):
             if url:
                 return f'<a href="{url}" target="_blank">🔗 기사 보기</a>'
