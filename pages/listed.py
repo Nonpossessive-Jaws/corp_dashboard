@@ -74,7 +74,8 @@ def fetch_stock_info(corp_name: str) -> dict | None:
             "시가총액": info.get("marketCap"),
             "조회시각": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-    except Exception:
+     except Exception as e:
+        st.warning(f"[디버그] 주가 조회 실패: {e}")  # 임시 추가
         return None
 
 
