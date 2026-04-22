@@ -162,6 +162,8 @@ def render():
         with st.spinner("뉴스 수집 중..."):
             news_list = fetch_and_store_news(corp_name, news_start, news_end)
 
+        st.warning(f"[디버그] 뉴스 수집 완료: {len(news_list)}건")  # ← 추가
+
         # ── 주가 정보 수집 (실패해도 결과 페이지는 정상 표시) ──
         with st.spinner("주가 정보 조회 중..."):
             stock_info = fetch_stock_info(corp_name)
