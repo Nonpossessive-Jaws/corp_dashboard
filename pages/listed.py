@@ -23,27 +23,25 @@ def _validate(corp_name, items, dart_start, dart_end, news_start, news_end) -> l
 
 
 def fetch_stock_info(corp_name: str) -> dict | None:
-    """
-    KRX 종목 리스트에서 기업명으로 티커를 찾고,
-    yfinance로 현재 주가 정보를 조회해 dict로 반환.
-    조회 실패 시 None 반환.
-    """
+    st.warning("[디버그] fetch_stock_info 호출됨")  # 함수 진입 확인
     try:
+        st.warning("[디버그] import 시도 중...")
         import FinanceDataReader as fdr
+        st.warning("[디버그] fdr import 성공")
         import yfinance as yf
+        st.warning("[디버그] yf import 성공")
         from datetime import datetime
 
+        st.warning("[디버그] KRX 조회 시도 중...")
         df_krx = fdr.StockListing('KRX')
+        st.warning(f"[디버그] KRX 조회 성공 / shape: {df_krx.shape} / 컬럼: {df_krx.columns.tolist()}")
 
-        # 여기서 실제 컬럼명을 화면에 출력
-        st.warning(f"[디버그] KRX 컬럼: {df_krx.columns.tolist()}")
-        st.warning(f"[디버그] 첫 행: {df_krx.iloc[0].to_dict()}")
-        
-        # 정확히 일치하는 종목 우선, 없으면 포함 검색
         exact = df_krx[df_krx['Name'] == corp_name]
         target = exact if not exact.empty else df_krx[df_krx['Name'].str.contains(corp_name, na=False)]
+        st.warning(f"[디버그] 검색 결과 행 수: {len(target)}")
 
         if target.empty:
+            st.warning("[디버그] target이 비어있어서 None 반환")
             return None
 
         row    = target.iloc[0]
@@ -80,7 +78,9 @@ def fetch_stock_info(corp_name: str) -> dict | None:
             "조회시각": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
      except Exception as e:
-        st.warning(f"[디버그] 주가 조회 실패: {e}")  # 임시 추가
+        import traceback
+        st.warning(f"[디버그] 예외 발생: {e}")
+        st.warning(f"[디버그] traceback: {traceback.format_exc()}")
         return None
 
 
