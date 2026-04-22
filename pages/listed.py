@@ -34,6 +34,11 @@ def fetch_stock_info(corp_name: str) -> dict | None:
         from datetime import datetime
 
         df_krx = fdr.StockListing('KRX')
+
+        # 여기서 실제 컬럼명을 화면에 출력
+        st.warning(f"[디버그] KRX 컬럼: {df_krx.columns.tolist()}")
+        st.warning(f"[디버그] 첫 행: {df_krx.iloc[0].to_dict()}")
+        
         # 정확히 일치하는 종목 우선, 없으면 포함 검색
         exact = df_krx[df_krx['Name'] == corp_name]
         target = exact if not exact.empty else df_krx[df_krx['Name'].str.contains(corp_name, na=False)]
