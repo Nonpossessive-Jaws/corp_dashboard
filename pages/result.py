@@ -203,7 +203,7 @@ def render():
             df_table = (pd.DataFrame(rows.values())
                           .sort_values("연도", ascending=False)
                           .reset_index(drop=True))
-            st.dataframe(df_table, width='stretch' , hide_index=True)
+            st.dataframe(df_table, use_container_width=True, hide_index=True)
 
     st.divider()
 
@@ -216,7 +216,7 @@ def render():
     if fig is None:
         st.warning("매출액 또는 영업이익 데이터가 존재하지 않아 그래프가 생략되었습니다.")
     else:
-        st.plotly_chart(fig, width='stretch' )
+        st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
 
