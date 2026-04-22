@@ -77,7 +77,7 @@ def fetch_stock_info(corp_name: str) -> dict | None:
             "시가총액": info.get("marketCap"),
             "조회시각": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
-     except Exception as e:
+    except Exception as e:
         import traceback
         st.warning(f"[디버그] 예외 발생: {e}")
         st.warning(f"[디버그] traceback: {traceback.format_exc()}")
